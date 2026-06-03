@@ -1,0 +1,82 @@
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;700;800&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-ink text-paper font-sans antialiased overflow-x-hidden;
+    background-image:
+      radial-gradient(1200px circle at 10% -20%, rgba(247, 179, 43, 0.08), transparent 45%),
+      radial-gradient(900px circle at 90% 10%, rgba(93, 228, 199, 0.06), transparent 40%),
+      linear-gradient(180deg, rgba(11, 12, 16, 1), rgba(8, 9, 12, 1));
+    background-attachment: fixed;
+    animation: bgPulse 20s ease-in-out infinite alternate;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-ink;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-steel/80 rounded-full hover:bg-saffron/60 transition-all;
+  }
+}
+
+@keyframes bgPulse {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: 100% 100%;
+  }
+}
+
+@keyframes breathe {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(0.95);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+.animate-breathe {
+  animation: breathe 2s infinite ease-in-out;
+}
+
+.grain {
+  position: relative;
+}
+.grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.06;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.25'/%3E%3C/svg%3E");
+  mix-blend-mode: soft-light;
+}
+
+.glass-panel {
+  @apply bg-carbon/60 backdrop-blur-xl border border-white/5 rounded-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.1)];
+}
+
+.data-pill {
+  @apply inline-flex items-center gap-1.5 rounded-full border border-steel/70 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-mist bg-carbon/40;
+}
+
+.tab-pill {
+  @apply rounded-full border border-steel/70 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-mist transition-all hover:bg-steel/30 hover:text-paper active:scale-95;
+}
+
+.tab-pill-active {
+  @apply border-saffron/75 text-saffron shadow-glow-saffron bg-saffron/10;
+}
+
