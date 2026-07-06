@@ -23,6 +23,15 @@ class DeviceBase(BaseModel):
     os: str
     ip_address: str
     location: str
+    screen_resolution: Optional[str] = None
+    timezone: Optional[str] = None
+    language: Optional[str] = None
+    user_agent: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    city: Optional[str] = None
+    region: Optional[str] = None
+    country: Optional[str] = None
 
 class DeviceCreate(DeviceBase):
     user_id: str
@@ -31,7 +40,9 @@ class DeviceResponse(DeviceBase):
     id: int
     user_id: str
     is_trusted: bool
-    registered_at: datetime
+    first_seen: datetime
+    last_seen: datetime
+    trust_score: float
     class Config:
         from_attributes = True
 
@@ -65,6 +76,15 @@ class DeviceSignal(BaseModel):
     os: str
     ip_address: str
     location: str
+    screen_resolution: Optional[str] = None
+    timezone: Optional[str] = None
+    language: Optional[str] = None
+    user_agent: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    city: Optional[str] = None
+    region: Optional[str] = None
+    country: Optional[str] = None
 
 class BehaviorSignal(BaseModel):
     keystroke_dwell: float
@@ -83,6 +103,7 @@ class TransactionScoreRequest(BaseModel):
     beneficiary_name: Optional[str] = None
     beneficiary_ifsc: Optional[str] = None
     beneficiary_added_at: Optional[datetime] = None
+    remarks: Optional[str] = None
     device: DeviceSignal
     behavior: BehaviorSignal
 
@@ -98,17 +119,28 @@ class TransactionResponse(TransactionBase):
 class RiskScoreResponse(BaseModel):
     behavioral_score: float
     device_score: float
+    geolocation_score: float
     anomaly_score: float
     graph_score: float
     total_score: float
+
+class ReasonCodeDetail(BaseModel):
+    code: str
+    severity: str
+    signal: str
+    human_message: str
 
 class DecisionResponse(BaseModel):
     transaction_id: str
     risk_score: float
     decision: str
     reason_codes: List[str]
+    reasons_detailed: List[ReasonCodeDetail] = []
     breakdown: RiskScoreResponse
+    scam_classification: Optional[str] = None
+    scam_explanation: Optional[str] = None
     timestamp: datetime
+    latency_ms: Optional[float] = None
 
 # Alert Schemas
 class AlertResponse(BaseModel):
@@ -130,6 +162,11 @@ class GraphNode(BaseModel):
     type: str  # USER, DEVICE, ACCOUNT
     is_fraudster: bool = False
     is_compromised: bool = False
+    is_mule: Optional[bool] = False
+    is_hub: Optional[bool] = False
+    is_funnel: Optional[bool] = False
+    is_circular: Optional[bool] = False
+    is_layering: Optional[bool] = False
 
 class GraphEdgeSchema(BaseModel):
     source: str
@@ -173,3 +210,22 @@ class FraudCaseResponse(BaseModel):
     severity: str
     class Config:
         from_attributes = True
+
+# Razorpay Schemas
+class RazorpayOrderRequest(BaseModel):
+    transaction_id: str
+    amount: float
+
+class RazorpayOrderResponse(BaseModel):
+    order_id: str
+    key_id: Optional[str]
+    amount: float
+    currency: str = "INR"
+    status: str
+
+class RazorpaySuccessRequest(BaseModel):
+    transaction_id: str
+    razorpay_payment_id: str
+    razorpay_order_id: str
+    razorpay_signature: str
+

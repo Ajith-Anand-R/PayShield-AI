@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;700;800&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&family=Fira+Sans:wght@300..900&family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -8,11 +8,10 @@
   body {
     @apply bg-ink text-paper font-sans antialiased overflow-x-hidden;
     background-image:
-      radial-gradient(1200px circle at 10% -20%, rgba(247, 179, 43, 0.08), transparent 45%),
-      radial-gradient(900px circle at 90% 10%, rgba(93, 228, 199, 0.06), transparent 40%),
-      linear-gradient(180deg, rgba(11, 12, 16, 1), rgba(8, 9, 12, 1));
+      radial-gradient(1000px circle at 0% 0%, rgba(16, 185, 129, 0.08), transparent 50%),
+      radial-gradient(800px circle at 100% 100%, rgba(59, 130, 246, 0.08), transparent 50%),
+      linear-gradient(180deg, #090d16 0%, #0f172a 100%);
     background-attachment: fixed;
-    animation: bgPulse 20s ease-in-out infinite alternate;
   }
 
   ::-webkit-scrollbar {
@@ -20,10 +19,14 @@
     height: 6px;
   }
   ::-webkit-scrollbar-track {
-    @apply bg-ink;
+    background: #090d16;
   }
   ::-webkit-scrollbar-thumb {
-    @apply bg-steel/80 rounded-full hover:bg-saffron/60 transition-all;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
   }
 }
 
@@ -58,25 +61,90 @@
   content: "";
   position: absolute;
   inset: 0;
-  opacity: 0.06;
+  opacity: 0.04;
   pointer-events: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.25'/%3E%3C/svg%3E");
-  mix-blend-mode: soft-light;
+  mix-blend-mode: overlay;
 }
 
 .glass-panel {
-  @apply bg-carbon/60 backdrop-blur-xl border border-white/5 rounded-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.1)];
+  background-color: rgba(30, 41, 59, 0.45) !important;
+  backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-radius: 1.25rem !important;
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(255, 255, 255, 0.05) inset !important;
 }
 
 .data-pill {
-  @apply inline-flex items-center gap-1.5 rounded-full border border-steel/70 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-mist bg-carbon/40;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.375rem !important;
+  border-radius: 9999px !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  padding: 0.25rem 0.625rem !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  color: #94a3b8 !important;
+  background-color: rgba(255, 255, 255, 0.03) !important;
 }
 
 .tab-pill {
-  @apply rounded-full border border-steel/70 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-mist transition-all hover:bg-steel/30 hover:text-paper active:scale-95;
+  border-radius: 9999px !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  padding: 0.375rem 1rem !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.1em !important;
+  color: #cbd5e1 !important;
+  transition-property: all !important;
+  transition-duration: 200ms !important;
+  background-color: transparent !important;
+}
+
+.tab-pill:hover {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+  color: #f8fafc !important;
 }
 
 .tab-pill-active {
-  @apply border-saffron/75 text-saffron shadow-glow-saffron bg-saffron/10;
+  border-color: #10b981 !important;
+  color: #10b981 !important;
+  background-color: rgba(16, 185, 129, 0.08) !important;
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.15) !important;
 }
+
+/* Premium Form Elements */
+input, select, textarea {
+  background-color: rgba(15, 23, 42, 0.6) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #f8fafc !important;
+  border-radius: 0.75rem !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: rgba(16, 185, 129, 0.4) !important;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.15) !important;
+  outline: none !important;
+}
+
+input:disabled {
+  background-color: rgba(15, 23, 42, 0.4) !important;
+  color: #475569 !important;
+  border-color: rgba(255, 255, 255, 0.04) !important;
+}
+
+/* Premium Scrollbars and Layout Tweaks */
+pre, .font-mono {
+  color: #e2e8f0;
+}
+
+/* Razorpay Modal container dark overlay customizer */
+.bg-\[\#121c2c\] {
+  background-color: #0d1527 !important;
+}
+
 

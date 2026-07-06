@@ -24,10 +24,13 @@ export default function GraphVisualizer({ nodes, edges }) {
       .force("center", d3.forceCenter(width / 2, height / 2));
 
     const color = (d) => {
-      if (d.is_fraudster || d.is_compromised) return "#FF5C5C";
-      if (d.type === "DEVICE") return "#B392F0";
-      if (d.type === "ACCOUNT") return "#F7B32B";
-      return "#5DE4C7";
+      if (d.is_fraudster || d.is_compromised) return "#f43f5e"; // Rose
+      if (d.is_circular) return "#fb923c"; // Orange
+      if (d.is_layering) return "#f472b6"; // Pink
+      if (d.is_mule || d.is_funnel || d.is_hub) return "#fbbf24"; // Amber
+      if (d.type === "DEVICE") return "#a78bfa"; // Violet
+      if (d.type === "ACCOUNT") return "#3b82f6"; // Cobalt
+      return "#34d399"; // Emerald
     };
 
     const link = svg
@@ -37,17 +40,33 @@ export default function GraphVisualizer({ nodes, edges }) {
       .append("line")
       .attr("class", "link")
       .attr("stroke", (d) => {
+        if (d.is_fraud_path) return "#f43f5e";
         const sourceId = typeof d.source === "object" ? d.source.id : d.source;
         const targetId = typeof d.target === "object" ? d.target.id : d.target;
-        const srcFraud = localNodes.find((n) => n.id === sourceId)?.is_fraudster;
-        const tgtFraud = localNodes.find((n) => n.id === targetId)?.is_fraudster;
-        return srcFraud || tgtFraud ? "#FF5C5C" : "#2A3344";
+        const srcNode = localNodes.find((n) => n.id === sourceId);
+        const tgtNode = localNodes.find((n) => n.id === targetId);
+        if (srcNode?.is_circular && tgtNode?.is_circular) return "#fb923c";
+        if (srcNode?.is_layering && tgtNode?.is_layering) return "#f472b6";
+        
+        const srcFraud = srcNode?.is_fraudster;
+        const tgtFraud = tgtNode?.is_fraudster;
+        return srcFraud || tgtFraud ? "#f43f5e" : "#334155";
       })
-      .attr("stroke-width", 1.5)
-      .attr("stroke-dasharray", (d) => {
+      .attr("stroke-width", (d) => {
+        if (d.is_fraud_path) return 3.0;
         const sourceId = typeof d.source === "object" ? d.source.id : d.source;
-        const srcFraud = localNodes.find((n) => n.id === sourceId)?.is_fraudster;
-        return srcFraud ? "4 2" : "none";
+        const targetId = typeof d.target === "object" ? d.target.id : d.target;
+        const srcNode = localNodes.find((n) => n.id === sourceId);
+        const tgtNode = localNodes.find((n) => n.id === targetId);
+        if (srcNode?.is_circular && tgtNode?.is_circular) return 2.5;
+        if (srcNode?.is_layering && tgtNode?.is_layering) return 2.5;
+        return 1.5;
+      })
+      .attr("stroke-dasharray", (d) => {
+        if (d.is_fraud_path) return "4 2";
+        const sourceId = typeof d.source === "object" ? d.source.id : d.source;
+        const srcNode = localNodes.find((n) => n.id === sourceId);
+        return srcNode?.is_fraudster ? "4 2" : "none";
       });
 
     const node = svg
@@ -77,17 +96,25 @@ export default function GraphVisualizer({ nodes, edges }) {
 
     node
       .append("circle")
-      .attr("r", 10)
+      .attr("r", (d) => {
+        if (d.is_mule || d.is_circular || d.is_layering) return 13;
+        return 10;
+      })
       .attr("fill", color)
-      .attr("stroke", "#0B0C10")
-      .attr("stroke-width", 2);
+      .attr("stroke", (d) => {
+        return "#0f172a";
+      })
+      .attr("stroke-width", (d) => {
+        if (d.is_mule || d.is_circular || d.is_layering) return 2.0;
+        return 1.5;
+      });
 
     node
       .append("text")
       .text((d) => d.label)
       .attr("dy", -14)
       .attr("text-anchor", "middle")
-      .attr("fill", "#94A3B8")
+      .attr("fill", "#cbd5e1")
       .attr("font-size", 9);
 
     simulation.on("tick", () => {

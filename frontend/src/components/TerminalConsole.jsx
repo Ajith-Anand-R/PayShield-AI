@@ -27,7 +27,7 @@ export default function TerminalConsole({ logs }) {
   return (
     <div className="glass-panel grain p-6 shadow-xl">
       <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-4">
-        <h2 className="font-display text-lg font-bold text-paper">Security Gateway Console</h2>
+        <h2 className="font-sans text-lg font-bold text-paper">Security Gateway Console</h2>
         <span className="data-pill font-bold">SSE Traffic</span>
       </div>
 
@@ -37,9 +37,9 @@ export default function TerminalConsole({ logs }) {
           <button
             key={filter.id}
             onClick={() => setActiveFilter(filter.id)}
-            className={`rounded-full px-3 py-1 text-[9px] font-bold uppercase tracking-widest transition-all duration-200 active:scale-95 ${
+            className={`rounded-full px-3 py-1 text-[9px] font-bold uppercase tracking-widest transition-all duration-200 active:scale-95 cursor-pointer ${
               activeFilter === filter.id
-                ? "bg-mint/15 text-mint border border-mint/30"
+                ? "bg-primary/15 text-primary border border-primary/30"
                 : "border border-white/5 text-mist hover:text-paper hover:bg-white/5"
             }`}
           >
@@ -53,7 +53,7 @@ export default function TerminalConsole({ logs }) {
         )}
       </div>
 
-      <div className="max-h-64 overflow-y-auto rounded-xl border border-white/5 bg-[#090B10]/90 p-4 font-mono text-[10.5px] leading-relaxed text-mist shadow-inner select-text">
+      <div className="max-h-64 overflow-y-auto rounded-xl border border-white/5 bg-ink/90 p-4 font-mono text-[10.5px] leading-relaxed text-mist shadow-inner select-text">
         {filteredLogs.length === 0 && <p className="text-mist/50 animate-pulse">Initializing socket stream... waiting for gateway events...</p>}
         {filteredLogs.map((log, idx) => (
           <div key={`${log.timestamp}-${idx}`} className="mb-2 flex gap-3 border-b border-white/[0.02] pb-1.5 last:border-0 last:pb-0">

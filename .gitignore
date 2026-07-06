@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.venv/
+venv/
+ENV/
+*.pkl
+*.db
+backend/app/engines/*.pkl
+backend/payshield.db
+backend/payshield_graph.pkl
+payshield.db
+payshield_graph.pkl
+
+# Node
+node_modules/
+frontend/dist/
+.eslintcache
+
+# Env & IDE
+.env
+.env.*
+.vscode/
+.idea/
+
+# Tooling
+graphify-out/

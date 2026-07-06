@@ -1,0 +1,32 @@
+{
+  "model_name": "device",
+  "version": "2.0.0",
+  "artifact_hash": "aa624c509684",
+  "estimator": "XGBClassifier",
+  "calibration": "isotonic",
+  "feature_names": [
+    "is_new_for_user",
+    "is_never_seen_globally",
+    "is_rare_globally",
+    "has_other_users",
+    "ip_mismatch",
+    "loc_mismatch"
+  ],
+  "n_features": 6,
+  "n_train": 23012,
+  "n_test": 5000,
+  "operating_threshold": 0.0225,
+  "target_recall": 0.85,
+  "metrics": {
+    "precision": 0.0179,
+    "recall": 0.8852,
+    "f1": 0.0351,
+    "auc": 0.7757,
+    "pr_auc": 0.0558,
+    "fpr": 0.5989,
+    "threshold": 0.0225
+  },
+  "sklearn_version": "1.8.0",
+  "xgboost_version": "3.2.0",
+  "trained_at": "2026-06-30T09:16:15.311948+00:00"
+}

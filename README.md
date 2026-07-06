@@ -27,20 +27,49 @@ docker-compose up
 
 ---
 
-## 🧪 Simulation Scenarios Included
+## 🧪 Controlled Verification Cases Included
 
 - **Account Takeover (ATO)**: New device from Nigeria, high value transfer to newly added beneficiary. Expected: `BLOCK`.
-- **Fraud Ring Detected**: Ring member shares device fingerprint with multiple compromised accounts. Expected: `DELAY` or `BLOCK`.
+- **Fraud Ring Detected**: Ring member shares device fingerprint with multiple compromised accounts. Expected: `REVIEW` or `BLOCK`.
 - **Safe Payment ✓**: Alice’s regular morning UPI transfer on trusted device. Expected: `ALLOW`.
 
 ---
 
-## ⚙️ Running Automated Backend Tests
+## 📂 Project Directory Structure
 
-You can run our in-memory unit test suite using `pytest`:
+### Backend (`backend/app/`)
+- `routers/`: Modular endpoint handlers
+  - `scoring.py`: Main risk scoring pipeline, including idempotency key checks (`X-API-Key` required when auth is enabled).
+  - `identity.py`: Session, device registration, and biometrics data collection.
+  - `dashboard.py`: System stats, alerts SSE stream, fraud graph, and metrics.
+  - `cases.py`: Cases review and analyst action resolution.
+  - `payments.py`: Simulated Razorpay payment flow order integration.
+  - `health.py`: Liveness (`/health`) and readiness (`/ready`) checks verifying DB, Redis, and ML model states.
+- `middleware/`:
+  - `auth.py`: Header-based `X-API-Key` verification (autoseeds `default-dev` / `dev-secret`).
+  - `rate_limit.py`: IP/Key rate limiter.
+- `services/`:
+  - `audit.py`: Structured JSON logger and DB audit trail logging.
+  - `sse.py`: Server-Sent Events broker.
 
+### Frontend (`frontend/src/`)
+- `components/`:
+  - `DiagnosticsPanel.jsx`: Visualizes system latencies and active ML model registry metrics.
+  - `RiskScorePanel.jsx`: Renders explainable decision reason codes dynamically.
+  - `TransactionForm.jsx`: Captures keystroke, mouse, and scroll events in real-time.
+  - `RazorpayModal.jsx`: Simulates Razorpay checkout interface.
+
+---
+
+## ⚙️ Running Automated Backend Tests & Benchmarks
+
+Run unit and integration tests:
 ```bash
 cd backend
-.venv\Scripts\python -m pytest tests/test_engines.py
+python -m pytest tests/ -v
 ```
-*All tests pass with 100% correctness.*
+
+Run stress/load test benchmarks:
+```bash
+python scripts/load_test.py
+```

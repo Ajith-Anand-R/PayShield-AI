@@ -1,0 +1,33 @@
+{
+  "model_name": "fusion",
+  "version": "2.0.0",
+  "artifact_hash": "c10a448160a0",
+  "estimator": "XGBClassifier",
+  "calibration": "isotonic",
+  "feature_names": [
+    "behavioral_score",
+    "device_score",
+    "geolocation_score",
+    "anomaly_score",
+    "graph_score",
+    "scam_likely",
+    "scam_suspicious"
+  ],
+  "n_features": 7,
+  "n_train": 23012,
+  "n_test": 5000,
+  "operating_threshold": 0.0158,
+  "target_recall": 0.85,
+  "metrics": {
+    "precision": 0.0424,
+    "recall": 0.8684,
+    "f1": 0.0809,
+    "auc": 0.8711,
+    "pr_auc": 0.5712,
+    "fpr": 0.4574,
+    "threshold": 0.0158
+  },
+  "sklearn_version": "1.8.0",
+  "xgboost_version": "3.2.0",
+  "trained_at": "2026-06-30T09:16:24.966615+00:00"
+}

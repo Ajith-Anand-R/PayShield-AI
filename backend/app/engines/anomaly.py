@@ -1,66 +1,64 @@
 import numpy as np
-from sklearn.ensemble import IsolationForest
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
+import os
+import pickle
 from ..models.models import Transaction
 
 class TransactionAnomalyEngine:
     _model = None
     
     @classmethod
+    def _load_model(cls):
+        if cls._model is None:
+            from .training import ANOMALY_MODEL_FILE
+            if os.path.exists(ANOMALY_MODEL_FILE):
+                try:
+                    with open(ANOMALY_MODEL_FILE, "rb") as f:
+                        cls._model = pickle.load(f)
+                except Exception as e:
+                    print(f"[PayShield] Error loading anomaly model: {e}")
+
+    @classmethod
     def train_model(cls, db: Session):
         """
-        Trains the Isolation Forest model on historical transaction patterns.
-        If no history exists, we seed the DB with realistic synthetic baseline data first.
+        Backwards-compatible entry point retained for callers/tests.
+
+        Delegates to the unified, calibrated training pipeline (``train_all_engines``)
+        so there is a single source of truth for model training. The previous
+        standalone path trained an uncalibrated RandomForest on label-leaking synthetic
+        data and reported a meaningless 100% accuracy; it has been removed.
         """
-        # Fetch last 1000 transactions to train the model
-        history = db.query(Transaction).filter(Transaction.status == "ALLOWED").order_by(Transaction.timestamp.desc()).limit(1000).all()
-        
-        # If we have less than 50 transactions, we generate local synthetic normal data for training
-        # to ensure the ML model can compile and perform inference immediately.
-        X_train = []
-        if len(history) < 50:
-            # Generate 200 synthetic normal transactions
-            # Normal distribution of amounts around $50-$150, hours mostly daytime (9am - 8pm), low velocity
-            prob_raw = np.array([0.05, 0.08, 0.09, 0.09, 0.08, 0.07, 0.07, 0.07, 0.08, 0.08, 0.07, 0.06, 0.04, 0.03, 0.02, 0.01, 0.01, 0.005, 0.005, 0.005, 0.005, 0.005, 0.01, 0.03])
-            prob_normalized = prob_raw / prob_raw.sum()
-            for _ in range(200):
-                amount = float(np.random.normal(75, 40))
-                amount = max(5.0, amount)  # min $5
-                hour = int(np.random.choice(
-                    a=[8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 0, 1, 2, 3, 4, 5, 6, 7],
-                    p=prob_normalized
-                ))
-                velocity_1h = int(np.random.poisson(0.5)) + 1
-                velocity_24h = int(np.random.poisson(2.5)) + 1
-                geo_distance = float(np.random.exponential(15)) # mostly local
-                
-                X_train.append([amount, hour, velocity_1h, velocity_24h, geo_distance])
-        else:
-            # Convert actual history to feature vectors
-            for tx in history:
-                hour = tx.timestamp.hour
-                # Calculate velocity dynamically (in-memory for training)
-                vel_1h = db.query(Transaction).filter(
-                    Transaction.user_id == tx.user_id,
-                    Transaction.timestamp >= tx.timestamp - timedelta(hours=1),
-                    Transaction.timestamp <= tx.timestamp
-                ).count()
-                
-                vel_24h = db.query(Transaction).filter(
-                    Transaction.user_id == tx.user_id,
-                    Transaction.timestamp >= tx.timestamp - timedelta(days=1),
-                    Transaction.timestamp <= tx.timestamp
-                ).count()
-                
-                # Mock geo_distance based on location changes
-                # In real life, we calculate distance. Here we use 0.0 for normal, larger for new
-                geo_distance = 0.0 if tx.location == "Home" else 150.0
-                X_train.append([tx.amount, hour, vel_1h, vel_24h, geo_distance])
-        
-        # Train the Isolation Forest
-        cls._model = IsolationForest(n_estimators=100, contamination=0.05, random_state=42)
-        cls._model.fit(X_train)
+        from .training import train_all_engines
+        train_all_engines(db)
+        cls._model = None
+        cls._load_model()
+
+    @staticmethod
+    def _heuristic_anomaly_score(amount_ratio, velocity_1h, velocity_24h, geo_distance, hour) -> float:
+        """
+        Rule-based fallback used when the trained model is unavailable or inference
+        fails. Mirrors the fraud vectors the model is trained on so the service
+        degrades gracefully instead of erroring out.
+        """
+        score = 0.0
+        if amount_ratio >= 10:
+            score += 60.0
+        elif amount_ratio >= 4:
+            score += 35.0
+        elif amount_ratio >= 2:
+            score += 15.0
+        if velocity_1h >= 7:
+            score += 30.0
+        elif velocity_1h >= 4:
+            score += 15.0
+        if geo_distance >= 800:
+            score += 35.0
+        elif geo_distance >= 300:
+            score += 15.0
+        if hour in (0, 1, 2, 3, 4):
+            score += 10.0
+        return min(score, 100.0)
 
     @classmethod
     def calculate_zscore_risk(cls, db: Session, user_id: str, amount: float) -> tuple[float, float]:
@@ -69,7 +67,7 @@ class TransactionAnomalyEngine:
         """
         history = db.query(Transaction).filter(
             Transaction.user_id == user_id,
-            Transaction.status == "ALLOWED"
+            Transaction.status == "ALLOW"
         ).order_by(Transaction.timestamp.desc()).limit(100).all()
         
         if len(history) < 5:
@@ -102,16 +100,17 @@ class TransactionAnomalyEngine:
         amount: float,
         location: str,
         beneficiary_age_hours: float | None = None,
-        new_beneficiary: bool = False
+        new_beneficiary: bool = False,
+        latitude: float | None = None,
+        longitude: float | None = None
     ) -> tuple[float, dict]:
         """
-        Extracts features for the incoming transaction and runs Isolation Forest inference.
+        Extracts features for the incoming transaction and runs RandomForestClassifier probability inference.
         Returns an anomaly risk score between 0 and 100 with diagnostic signals.
         """
-        # Ensure model is trained; if not, train it
-        if cls._model is None:
-            cls.train_model(db)
-            
+        # Ensure model is loaded (heuristic fallback handles a missing model below)
+        cls._load_model()
+
         now = datetime.now()
         hour = now.hour
         
@@ -134,32 +133,54 @@ class TransactionAnomalyEngine:
         if not last_tx:
             geo_distance = 0.0  # first transaction
         else:
-            if last_tx.location == location:
-                geo_distance = 0.0
+            if latitude is not None and longitude is not None and last_tx.latitude is not None and last_tx.longitude is not None:
+                from .geolocation import GeolocationRiskEngine
+                geo_distance = GeolocationRiskEngine.haversine_distance(
+                    last_tx.latitude, last_tx.longitude, latitude, longitude
+                )
             else:
-                # Basic distance mocking based on location names
-                # Home/Work = short distance, Overseas/New Country = extreme distance
-                if "Overseas" in location or "London" in location or "Tokyo" in location:
-                    geo_distance = 3500.0
-                elif "New City" in location or "California" in location:
-                    geo_distance = 500.0
+                if last_tx.location == location:
+                    geo_distance = 0.0
                 else:
-                    geo_distance = 50.0
+                    if "Overseas" in location or "London" in location or "Tokyo" in location:
+                        geo_distance = 3500.0
+                    elif "New City" in location or "California" in location:
+                        geo_distance = 500.0
+                    else:
+                        geo_distance = 50.0
+                        
+        # Calculate user's average historical transaction amount
+        user_history = db.query(Transaction).filter(
+            Transaction.user_id == user_id,
+            Transaction.status == "ALLOW"
+        ).all()
+        if user_history:
+            user_avg_amount = sum(t.amount for t in user_history) / len(user_history)
+        else:
+            # Fallback to global average of ALLOWED transactions if available
+            global_history = db.query(Transaction).filter(Transaction.status == "ALLOW").all()
+            if global_history:
+                user_avg_amount = sum(t.amount for t in global_history) / len(global_history)
+            else:
+                user_avg_amount = 500.0  # static default baseline for first-time transaction
+            
+        amount_ratio = amount / (user_avg_amount + 1.0)
                     
         # Feature vector
-        x = np.array([[amount, hour, velocity_1h, velocity_24h, geo_distance]])
-        
-        # isolation forest decision_function outputs negative values for anomalies, positive for inliers
-        # Values range roughly from -0.5 (most anomalous) to +0.5 (most normal)
-        raw_score = cls._model.decision_function(x)[0]
-        
-        # Normalize to 0-100 range:
-        # standard normal transactions yield raw_score around 0.15 - 0.25 -> risk 0-20
-        # highly anomalous yields raw_score around -0.15 to -0.30 -> risk 80-100
-        # Formula: score = (inlier_score - raw_score) * scale
-        # We can map raw_score of 0.20 to 0.0 risk, and raw_score of -0.20 to 100.0 risk
-        normalized_score = (0.20 - raw_score) * 250.0
-        isolation_forest_score = min(max(normalized_score, 0.0), 100.0)
+        x = np.array([[amount_ratio, hour, velocity_1h, velocity_24h, geo_distance]])
+
+        # Supervised probability estimation for Class 1 (Fraud anomaly), with a
+        # heuristic fallback if the model is missing or inference fails.
+        supervised_anomaly_score = None
+        if cls._model is not None:
+            try:
+                supervised_anomaly_score = float(cls._model.predict_proba(x)[0][1] * 100.0)
+            except Exception as e:
+                print(f"[PayShield] Anomaly model inference failed, using heuristic: {e}")
+        if supervised_anomaly_score is None:
+            supervised_anomaly_score = cls._heuristic_anomaly_score(
+                amount_ratio, velocity_1h, velocity_24h, geo_distance, hour
+            )
         
         zscore_risk, z_val = cls.calculate_zscore_risk(db, user_id, amount)
         
@@ -180,7 +201,7 @@ class TransactionAnomalyEngine:
         
         high_value_risk = 10.0 if amount > 50000 else 0.0
         
-        base_score = max(isolation_forest_score, zscore_risk)
+        base_score = max(supervised_anomaly_score, zscore_risk)
         final_score = min(base_score + velocity_risk + beneficiary_risk + high_value_risk, 100.0)
         
         return round(final_score, 2), {
@@ -189,3 +210,5 @@ class TransactionAnomalyEngine:
             "new_beneficiary": new_beneficiary,
             "beneficiary_age_h": beneficiary_age_hours
         }
+
+

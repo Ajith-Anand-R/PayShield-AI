@@ -1,6 +1,13 @@
 import os
 import time
-import redis
+# `redis` is optional: if not installed, MemoryRedis is used automatically.
+try:
+    import redis as _redis_lib
+    _REDIS_AVAILABLE = True
+except ImportError:
+    _redis_lib = None  # type: ignore
+    _REDIS_AVAILABLE = False
+
 
 _client = None
 
@@ -38,13 +45,16 @@ def get_redis():
         redis_url = os.getenv("REDIS_URL", "")
         if not redis_url:
             redis_url = "redis://localhost:6379"
-            
+
         if redis_url.startswith("memory://") or redis_url == "memory":
             print("[PayShield] Using configured in-memory Redis client.")
             _client = MemoryRedis()
+        elif not _REDIS_AVAILABLE:
+            print("[PayShield] `redis` package not installed. Falling back to in-memory Redis client.")
+            _client = MemoryRedis()
         else:
             try:
-                client_candidate = redis.Redis.from_url(redis_url, decode_responses=True, socket_connect_timeout=1)
+                client_candidate = _redis_lib.Redis.from_url(redis_url, decode_responses=True, socket_connect_timeout=1)
                 client_candidate.ping()
                 _client = client_candidate
                 print("[PayShield] Successfully connected to Redis.")
@@ -52,6 +62,7 @@ def get_redis():
                 print(f"[PayShield] Redis connection failed to {redis_url} ({e}). Falling back to in-memory Redis client.")
                 _client = MemoryRedis()
     return _client
+
 
 def increment_txn_count(user_id: str) -> int:
     r = get_redis()

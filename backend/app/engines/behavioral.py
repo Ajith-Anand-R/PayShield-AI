@@ -1,10 +1,27 @@
 from sqlalchemy.orm import Session
 from ..models.models import BehaviorProfile
 from ..schemas.schemas import BehaviorSignal
+import os
+import pickle
+import numpy as np
 
 class BehavioralEngine:
-    @staticmethod
-    def calculate_risk(db: Session, user_id: str, signal: BehaviorSignal) -> float:
+    _model = None
+
+    @classmethod
+    def _load_model(cls):
+        if cls._model is None:
+            # Import dynamically to avoid circular import dependency
+            from .training import BEHAVIORAL_MODEL_FILE
+            if os.path.exists(BEHAVIORAL_MODEL_FILE):
+                try:
+                    with open(BEHAVIORAL_MODEL_FILE, "rb") as f:
+                        cls._model = pickle.load(f)
+                except Exception as e:
+                    print(f"[PayShield] Error loading behavioral model: {e}")
+
+    @classmethod
+    def calculate_risk(cls, db: Session, user_id: str, signal: BehaviorSignal) -> float:
         """
         Compares incoming keystroke/mouse signals against the user's saved baseline behavior profile.
         Returns a behavioral risk score between 0 and 100.
@@ -23,7 +40,7 @@ class BehavioralEngine:
                 scroll_velocity_avg=signal.scroll_velocity
             )
             db.add(new_profile)
-            db.commit()
+            db.flush()
             return 0.0  # Safe initial baseline
         
         # If the baseline is empty/unseeded, return 0
@@ -33,7 +50,7 @@ class BehavioralEngine:
             profile.mouse_speed_avg = signal.mouse_speed
             profile.mouse_jitter_avg = signal.mouse_jitter
             profile.scroll_velocity_avg = signal.scroll_velocity
-            db.commit()
+            db.flush()
             return 0.0
 
         # Calculate absolute deviations
@@ -49,21 +66,34 @@ class BehavioralEngine:
         if signal.mouse_speed > 0 and signal.mouse_jitter == 0:
             is_bot = True
         
-        # Calculate combined average deviation
-        avg_deviation = (dev_dwell + dev_flight + dev_speed + dev_jitter + dev_scroll) / 5.0
-        
-        # Map average deviation to 0-100 risk score
-        # deviation of 0.20 (20%) is standard user variance
-        # deviation above 0.80 (80%) is highly suspicious
-        if avg_deviation <= 0.15:
-            score = avg_deviation * 100.0  # 0 to 15
-        elif avg_deviation <= 0.60:
-            score = 15.0 + (avg_deviation - 0.15) * 100.0  # 15 to 60
-        else:
-            score = min(60.0 + (avg_deviation - 0.60) * 100.0, 100.0)  # up to 100
+        cls._load_model()
+        score = None
+        if cls._model is not None:
+            try:
+                # Model features: [dev_dwell, dev_flight, dev_speed, dev_jitter, dev_scroll, is_bot]
+                x = np.array([[dev_dwell, dev_flight, dev_speed, dev_jitter, dev_scroll, float(is_bot)]])
+                score = float(cls._model.predict_proba(x)[0][1] * 100.0)
+                if is_bot:
+                    score = max(score, 95.0)
+            except Exception as e:
+                print(f"[PayShield] Behavioral model inference failed, using heuristic: {e}")
+                score = None
+        if score is None:
+            # Calculate combined average deviation
+            avg_deviation = (dev_dwell + dev_flight + dev_speed + dev_jitter + dev_scroll) / 5.0
             
-        if is_bot:
-            score = max(score, 95.0)  # Bot detected is a critical risk
+            # Map average deviation to 0-100 risk score
+            # deviation of 0.20 (20%) is standard user variance
+            # deviation above 0.80 (80%) is highly suspicious
+            if avg_deviation <= 0.15:
+                score = avg_deviation * 100.0  # 0 to 15
+            elif avg_deviation <= 0.60:
+                score = 15.0 + (avg_deviation - 0.15) * 100.0  # 15 to 60
+            else:
+                score = min(60.0 + (avg_deviation - 0.60) * 100.0, 100.0)  # up to 100
+                
+            if is_bot:
+                score = max(score, 95.0)  # Bot detected is a critical risk
             
         # Dynamically adaptive learning: slowly update user baseline profile for minor variations
         if score < 50.0:  # Only update baseline if transaction is relatively normal/safe
@@ -73,6 +103,7 @@ class BehavioralEngine:
             profile.mouse_speed_avg = (1 - alpha) * profile.mouse_speed_avg + alpha * signal.mouse_speed
             profile.mouse_jitter_avg = (1 - alpha) * profile.mouse_jitter_avg + alpha * signal.mouse_jitter
             profile.scroll_velocity_avg = (1 - alpha) * profile.scroll_velocity_avg + alpha * signal.scroll_velocity
-            db.commit()
 
+        db.flush()
         return round(score, 2)
+

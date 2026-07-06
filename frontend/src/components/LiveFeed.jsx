@@ -33,7 +33,7 @@ export default function LiveFeed({ transactions, onSelect, selectedId }) {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-mint opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-mint"></span>
           </span>
-          <h2 className="font-display text-lg font-bold text-paper">Live Transaction Feed</h2>
+          <h2 className="font-sans text-lg font-bold text-paper">Live Transaction Feed</h2>
           {transactions.length > 0 && (
             <span className="ml-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-[9px] font-mono font-bold text-mist">
               {transactions.length} transactions
@@ -45,8 +45,8 @@ export default function LiveFeed({ transactions, onSelect, selectedId }) {
             onClick={() => setAutoScroll(!autoScroll)}
             className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-[9px] font-bold uppercase tracking-widest transition-all duration-200 active:scale-95 ${
               autoScroll
-                ? "border-mint/30 bg-mint/10 text-mint"
-                : "border-gold/30 bg-gold/10 text-gold"
+                ? "border-primary/30 bg-primary/10 text-primary"
+                : "border-saffron/30 bg-saffron/10 text-saffron"
             }`}
           >
             {autoScroll ? (
@@ -72,7 +72,7 @@ export default function LiveFeed({ transactions, onSelect, selectedId }) {
             onClick={() => onSelect(tx)}
             className={`w-full rounded-xl border px-4 py-3.5 text-left transition-all duration-300 transform hover:-translate-y-0.5 active:scale-[0.98] ${
               selectedId === tx.transaction_id
-                ? "border-saffron/60 bg-saffron/5 shadow-glow-saffron/5"
+                ? "border-primary/60 bg-primary/5 shadow-glow-primary/5"
                 : "border-white/5 bg-carbon/40 hover:border-white/10 hover:bg-carbon/60"
             }`}
           >

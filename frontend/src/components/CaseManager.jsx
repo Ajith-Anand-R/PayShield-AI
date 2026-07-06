@@ -17,7 +17,7 @@ export default function CaseManager({ cases, onUpdateCase }) {
   return (
     <div className="glass-panel grain p-6 shadow-xl">
       <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-4">
-        <h2 className="font-display text-lg font-bold text-paper">Active Fraud Cases</h2>
+        <h2 className="font-sans text-lg font-bold text-paper">Active Fraud Cases</h2>
         <span className="data-pill font-bold">Compliance Node</span>
       </div>
       <div className="mt-4 overflow-x-auto pr-1">

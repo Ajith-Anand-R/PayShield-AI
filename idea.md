@@ -7,7 +7,7 @@
 
 ## 💡 PayShield: Full Hackathon Idea
 
-PayShield is a **real-time, pre-transaction fraud prevention system**. The core idea is not to detect fraud after money is gone, but to score risk **before approval** using four signals: **behavior**, **device trust**, **transaction anomaly**, and **graph relationships**. It serves as a multi-layer fraud intelligence system with a final **risk score from 0 to 100** and a decision output of **Allow, Step-Up, Delay, or Block**.
+PayShield is a **real-time, pre-transaction fraud prevention system**. The core idea is not to detect fraud after money is gone, but to score risk **before approval** using four signals: **behavior**, **device trust**, **transaction anomaly**, and **graph relationships**. It serves as a multi-layer fraud intelligence system with a final **risk score from 0 to 100** and a decision output of **Allow, Step-Up, Review, or Block**.
 
 ---
 
@@ -43,7 +43,7 @@ PayShield does **not** replace GPay, UPI, card rails, or banking apps. It sits *
 5. The decision engine maps the score to an action:
    * **0–30** → **Allow** (transaction is approved and completed).
    * **30–60** → **Step-Up** (requires multi-factor challenge / OTP).
-   * **60–90** → **Delay** (placed in a temporary hold queue for review).
+   * **60–90** → **Review** (placed in a temporary hold queue for review).
    * **90+** → **Block** (payment is stopped immediately).
 6. The payment continues only if approved. Otherwise, it is challenged or stopped before the money leaves the source account.
 
@@ -77,7 +77,7 @@ graph TD
     
     F -->|0-30| G[ALLOW]
     F -->|30-60| H[STEP-UP]
-    F -->|60-90| I[DELAY]
+    F -->|60-90| I[REVIEW]
     F -->|90+| J[BLOCK]
     
     E --> K[Explainable Reason Codes]
@@ -126,7 +126,7 @@ graph TD
 * **Thresholds**:
   * **0–30**: **ALLOW** (Low Risk)
   * **30–60**: **STEP-UP** (Medium Risk: requires challenge, OTP, or biometrics)
-  * **60–90**: **DELAY** (High Risk: placed on manual/temporary hold for analysis)
+  * **60–90**: **REVIEW** (High Risk: placed on manual/temporary hold for analysis)
   * **90+**: **BLOCK** (Critical Risk: transaction cancelled instantly)
 * **Explainability Codes**: Generates transparent reason tags (e.g., `BOT_PATTERN_DETECTED`, `HIGH_AMOUNT`, `NEW_DEVICE`, `FRAUD_RING_LINK`) so judges and analysts can immediately inspect the system's decision reasoning.
 
@@ -196,7 +196,7 @@ graph TD
   "amount": 2500.0,
   "target_account": "acc_mule_account",
   "risk_score": 82.5,
-  "decision": "DELAY",
+  "decision": "REVIEW",
   "reason_codes": [
     "HIGH_AMOUNT",
     "BOT_PATTERN_DETECTED"
@@ -230,7 +230,7 @@ graph TD
 
 ### Scenario 3: Anomaly / Night Transfer (Bot)
 * **Inputs**: Extreme amount, 3 AM time, Tor Browser, perfectly uniform typing, zero mouse jitter.
-* **Expected Action**: **BLOCK** or **DELAY** (Risk score > 90, `BOT_PATTERN_DETECTED`).
+* **Expected Action**: **BLOCK** or **REVIEW** (Risk score > 90, `BOT_PATTERN_DETECTED`).
 
 ### Scenario 4: Fraud Ring Traversal
 * **Inputs**: Bob logs in from a device hash previously linked to Mallory (flagged fraudster).
